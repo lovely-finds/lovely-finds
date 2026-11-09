@@ -143,7 +143,8 @@
           <div class="hint"><span id="captionCount">0</span>/2.200 caracteres</div>
           <div class="actions">
             <button class="btn btn-secondary" id="saveDraft">Salvar rascunho</button>
-            <button class="btn btn-primary" id="saveAndPreview">Salvar e revisar</button>
+            <button class="btn btn-secondary" id="saveAndPreview">Salvar e revisar</button>
+            <button class="btn btn-primary hidden" id="publishNow">Publicar agora</button>
           </div>
           <div class="status-line" id="composeMessage"></div>
         </div>
@@ -250,7 +251,16 @@
   }
 
   document.querySelectorAll('nav button').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
-  document.getElementById('startCreate').addEventListener('click', () => showView('compose'));
+  document.getElementById('startCreate').addEventListener('click', () => {
+    currentDraftId = null;
+    document.getElementById('productName').value = '';
+    imageUrlInput.value = '';
+    captionInput.value = '';
+    document.getElementById('publishNow').classList.add('hidden');
+    setMessage('composeMessage', '');
+    updatePreview();
+    showView('compose');
+  });
   document.getElementById('refreshButton').addEventListener('click', loadDashboard);
   document.getElementById('testConnection').addEventListener('click', () => {
     setMessage('connectionMessage', 'Testando conexão…');
@@ -291,14 +301,21 @@
 
   function saveDraft(showReview) {
     const payload = collectDraft();
+    if (!payload.imageUrl) {
+      setMessage('composeMessage', 'Informe a URL HTTPS pública da imagem.', 'error');
+      return;
+    }
     setMessage('composeMessage', 'Salvando rascunho…');
     callServer('saveDraft', payload, result => {
       currentDraftId = result.id;
-      setMessage('composeMessage', 'Rascunho salvo. Nada foi publicado.', 'success');
-      if (showReview) {
-        const yes = confirm('Rascunho salvo. Quer publicar esta imagem no Instagram agora? Ela ficará visível no feed.');
-        if (yes) publishCurrentDraft();
-      }
+      document.getElementById('publishNow').classList.toggle('hidden', !showReview);
+      setMessage(
+        'composeMessage',
+        showReview
+          ? 'Rascunho salvo. Confira a prévia e clique em “Publicar agora” somente quando estiver pronta.'
+          : 'Rascunho salvo. Nada foi publicado.',
+        'success'
+      );
       loadDashboard();
     }, error => setMessage('composeMessage', error, 'error'));
   }
@@ -307,15 +324,27 @@
     if (!currentDraftId) return;
     const confirmed = confirm('Confirma publicar esta imagem no perfil @cantinho_dos_achados_br? A publicação ficará visível para seus seguidores.');
     if (!confirmed) return;
+    const publishButton = document.getElementById('publishNow');
+    publishButton.disabled = true;
     setMessage('composeMessage', 'Enviando imagem para a Meta e aguardando processamento…');
     callServer('publishDraft', currentDraftId, result => {
-      setMessage('composeMessage', result.message || 'Solicitação concluída.', result.pending ? '' : 'success');
+      publishButton.disabled = false;
+      if (result.pending) {
+        setMessage('composeMessage', result.message, '');
+      } else {
+        setMessage('composeMessage', result.message || 'Publicação concluída.', 'success');
+        publishButton.classList.add('hidden');
+      }
       loadDashboard();
-    }, error => setMessage('composeMessage', error, 'error'));
+    }, error => {
+      publishButton.disabled = false;
+      setMessage('composeMessage', error, 'error');
+    });
   }
 
   document.getElementById('saveDraft').addEventListener('click', () => saveDraft(false));
   document.getElementById('saveAndPreview').addEventListener('click', () => saveDraft(true));
+  document.getElementById('publishNow').addEventListener('click', publishCurrentDraft);
 
   loadDashboard();
 </script>
