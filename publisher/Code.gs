@@ -15,6 +15,7 @@ const APP_CONFIG = {
   igUserIdProperty: 'IG_USER_ID',
   apiVersionProperty: 'META_API_VERSION',
   githubTokenProperty: 'GITHUB_TOKEN',
+  uploadSecretProperty: 'IMAGE_UPLOAD_SECRET',
   githubRepository: 'lovely-finds/lovely-finds',
   defaultApiVersion: 'v27.0',
   postsSheet: 'Posts'
@@ -522,4 +523,89 @@ function testGitHubUploadAndDelete() {
     historyPreserved: true,
     message: 'O Apps Script criou e removeu o arquivo de teste com sucesso. Nenhuma publicação foi feita.'
   };
+}
+
+
+/**
+ * Authenticated binary-image receiver for the Cantinho ChatGPT workflow.
+ * Configure IMAGE_UPLOAD_SECRET and GITHUB_TOKEN in Apps Script Script Properties.
+ * POST JSON: { action, secret, fileName, mimeType, imageBase64 }
+ * Returns a public raw GitHub URL. This endpoint does not publish to Instagram.
+ */
+function doPost(e) {
+  try {
+    const body = JSON.parse(e && e.postData && e.postData.contents || '{}');
+    if (body.action !== 'upload_image_to_github') {
+      return jsonOutput_({ ok: false, error: 'Ação não reconhecida.' });
+    }
+
+    const expectedSecret = getRequiredProperty_(APP_CONFIG.uploadSecretProperty);
+    const suppliedSecret = String(body.secret || '');
+    if (!suppliedSecret || suppliedSecret !== expectedSecret) {
+      return jsonOutput_({ ok: false, error: 'Não autorizado.' });
+    }
+
+    const mimeType = String(body.mimeType || '').toLowerCase();
+    const extensionByMime = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp'
+    };
+    const extension = extensionByMime[mimeType];
+    if (!extension) {
+      return jsonOutput_({ ok: false, error: 'Formato inválido. Use JPEG, PNG ou WebP.' });
+    }
+
+    const imageBase64 = String(body.imageBase64 || '').replace(/^data:image\\/[a-zA-Z0-9.+-]+;base64,/, '');
+    if (!imageBase64 || imageBase64.length > 9500000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64)) {
+      return jsonOutput_({ ok: false, error: 'Imagem ausente, inválida ou maior que o limite de 7 MB.' });
+    }
+
+    const suppliedName = String(body.fileName || 'produto').toLowerCase()
+      .replace(/\\.[a-z0-9]+$/, '')
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'produto';
+    const fileName = Utilities.getUuid().slice(0, 8) + '-' + suppliedName + '.' + extension;
+    const path = 'uploads/' + fileName;
+    const githubToken = getRequiredProperty_(APP_CONFIG.githubTokenProperty);
+    const apiUrl = 'https://api.github.com/repos/' + APP_CONFIG.githubRepository +
+      '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+    const response = UrlFetchApp.fetch(apiUrl, {
+      method: 'put',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + githubToken,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      },
+      payload: JSON.stringify({
+        message: 'Upload approved Cantinho image: ' + fileName,
+        content: imageBase64,
+        branch: 'main'
+      }),
+      muteHttpExceptions: true
+    });
+
+    const status = response.getResponseCode();
+    if (status < 200 || status >= 300) {
+      throw new Error('GitHub recusou o upload (HTTP ' + status + ').');
+    }
+
+    const imageUrl = 'https://raw.githubusercontent.com/' + APP_CONFIG.githubRepository +
+      '/main/' + path;
+    return jsonOutput_({
+      ok: true,
+      path: path,
+      imageUrl: imageUrl,
+      message: 'Imagem enviada para uploads/.'
+    });
+  } catch (error) {
+    return jsonOutput_({ ok: false, error: safeErrorMessage_(error) });
+  }
+}
+
+function jsonOutput_(value) {
+  return ContentService.createTextOutput(JSON.stringify(value))
+    .setMimeType(ContentService.MimeType.JSON);
 }
