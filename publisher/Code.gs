@@ -461,3 +461,65 @@ function testGitHubCleanupConnection() {
   const data = JSON.parse(response.getContentText());
   return { ok: true, repository: data.full_name, message: 'Token aceito pelo GitHub.' };
 }
+
+
+/**
+ * End-to-end permission test. Creates a uniquely named tiny PNG in uploads/
+ * and immediately removes it using the same cleanup helper used after publishing.
+ * It does not call Instagram or publish anything.
+ */
+function testGitHubUploadAndDelete() {
+  const token = getRequiredProperty_(APP_CONFIG.githubTokenProperty);
+  const path = 'uploads/test-cleanup-permission.png';
+  const imageBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pWQAAAAASUVORK5CYII=';
+  const apiUrl = 'https://api.github.com/repos/' + APP_CONFIG.githubRepository +
+    '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+  const headers = {
+    Authorization: 'Bearer ' + token,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+
+  // Never overwrite a pre-existing file.
+  const existing = UrlFetchApp.fetch(apiUrl + '?ref=main', {
+    method: 'get', headers: headers, muteHttpExceptions: true
+  });
+  if (existing.getResponseCode() === 200) {
+    throw new Error('O arquivo de teste já existe. Não foi alterado nem removido.');
+  }
+  if (existing.getResponseCode() !== 404) {
+    throw new Error('Não foi possível verificar o arquivo de teste (HTTP ' + existing.getResponseCode() + ').');
+  }
+
+  const create = UrlFetchApp.fetch(apiUrl, {
+    method: 'put',
+    contentType: 'application/json',
+    headers: headers,
+    payload: JSON.stringify({
+      message: 'Test GitHub upload permission for Apps Script cleanup',
+      content: imageBase64,
+      branch: 'main'
+    }),
+    muteHttpExceptions: true
+  });
+  if (create.getResponseCode() < 200 || create.getResponseCode() >= 300) {
+    throw new Error('GitHub não conseguiu criar o arquivo de teste (HTTP ' + create.getResponseCode() + ').');
+  }
+
+  // Delete only after GitHub confirms the test file was created.
+  const deletion = deletePublishedImageFromGitHub_(
+    'https://raw.githubusercontent.com/' + APP_CONFIG.githubRepository + '/main/' + path
+  );
+  if (!deletion.ok) {
+    throw new Error('O arquivo de teste foi criado, mas não foi removido: ' + deletion.message);
+  }
+
+  return {
+    ok: true,
+    created: true,
+    deleted: true,
+    path: path,
+    historyPreserved: true,
+    message: 'O Apps Script criou e removeu o arquivo de teste com sucesso. Nenhuma publicação foi feita.'
+  };
+}
