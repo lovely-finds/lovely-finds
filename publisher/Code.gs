@@ -71,81 +71,92 @@ function publishDraft(draftId) {
     throw new Error('Identificador do rascunho inválido.');
   }
 
-  const token = getRequiredProperty_(APP_CONFIG.tokenProperty);
-  const igUserId = getRequiredProperty_(APP_CONFIG.igUserIdProperty);
-  const spreadsheet = getOrCreateSpreadsheet_();
-  const sheet = spreadsheet.getSheetByName(APP_CONFIG.postsSheet);
-  const found = findPostRow_(sheet, draftId);
-  if (!found) throw new Error('Rascunho não encontrado.');
-
-  const post = rowToPost_(found.values);
-  if (post.status === 'PUBLISHED') throw new Error('Este rascunho já foi publicado.');
-  if (post.status === 'PROCESSING') throw new Error('Este rascunho já está em processamento.');
-
-  updatePostCell_(sheet, found.row, 6, 'PROCESSING');
-  updatePostCell_(sheet, found.row, 10, '');
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    throw new Error('Outra publicação está em andamento. Aguarde alguns segundos.');
+  }
 
   try {
-    const createResponse = metaRequest_(
-      'POST',
-      '/' + encodeURIComponent(igUserId) + '/media',
-      { image_url: post.imageUrl, caption: post.caption },
-      token
-    );
+    const token = getRequiredProperty_(APP_CONFIG.tokenProperty);
+    const igUserId = getRequiredProperty_(APP_CONFIG.igUserIdProperty);
+    const spreadsheet = getOrCreateSpreadsheet_();
+    const sheet = spreadsheet.getSheetByName(APP_CONFIG.postsSheet);
+    const found = findPostRow_(sheet, draftId);
+    if (!found) throw new Error('Rascunho não encontrado.');
 
-    const containerId = createResponse.id;
-    if (!containerId) throw new Error('A Meta não retornou o ID do contêiner.');
-    updatePostCell_(sheet, found.row, 7, containerId);
+    const post = rowToPost_(found.values);
+    if (post.status === 'PUBLISHED') throw new Error('Este rascunho já foi publicado.');
 
-    let status = '';
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const statusResponse = metaRequest_(
-        'GET',
-        '/' + encodeURIComponent(containerId),
-        { fields: 'status_code' },
+    updatePostCell_(sheet, found.row, 6, 'PROCESSING');
+    updatePostCell_(sheet, found.row, 10, '');
+
+    try {
+      // Reuse an existing container after a temporary processing timeout.
+      let containerId = post.containerId;
+      if (!containerId || post.status === 'DRAFT' || post.status === 'ERROR') {
+        const createResponse = metaRequest_(
+          'POST',
+          '/' + encodeURIComponent(igUserId) + '/media',
+          { image_url: post.imageUrl, caption: post.caption },
+          token
+        );
+        containerId = createResponse.id;
+        if (!containerId) throw new Error('A Meta não retornou o ID do contêiner.');
+        updatePostCell_(sheet, found.row, 7, containerId);
+      }
+
+      let status = '';
+      for (let attempt = 0; attempt < 25; attempt++) {
+        const statusResponse = metaRequest_(
+          'GET',
+          '/' + encodeURIComponent(containerId),
+          { fields: 'status_code' },
+          token
+        );
+        status = statusResponse.status_code || '';
+        if (status === 'FINISHED') break;
+        if (status === 'ERROR' || status === 'EXPIRED') {
+          throw new Error('A Meta informou que o contêiner ficou ' + status + '.');
+        }
+        Utilities.sleep(1500);
+      }
+
+      if (status !== 'FINISHED') {
+        updatePostCell_(sheet, found.row, 6, 'PROCESSING');
+        return {
+          ok: true,
+          pending: true,
+          containerId: containerId,
+          message: 'A imagem ainda está sendo processada. Clique em “Retomar publicação” daqui a pouco.'
+        };
+      }
+
+      const publishResponse = metaRequest_(
+        'POST',
+        '/' + encodeURIComponent(igUserId) + '/media_publish',
+        { creation_id: containerId },
         token
       );
-      status = statusResponse.status_code || '';
-      if (status === 'FINISHED') break;
-      if (status === 'ERROR' || status === 'EXPIRED') {
-        throw new Error('A Meta informou que o contêiner ficou ' + status + '.');
-      }
-      Utilities.sleep(1500);
-    }
+      if (!publishResponse.id) throw new Error('A Meta não retornou o ID da publicação.');
 
-    if (status !== 'FINISHED') {
-      updatePostCell_(sheet, found.row, 6, 'PROCESSING');
+      updatePostCell_(sheet, found.row, 6, 'PUBLISHED');
+      updatePostCell_(sheet, found.row, 8, publishResponse.id);
+      updatePostCell_(sheet, found.row, 9, new Date().toISOString());
+
       return {
         ok: true,
-        pending: true,
+        pending: false,
+        mediaId: publishResponse.id,
         containerId: containerId,
-        message: 'A imagem ainda está sendo processada. Tente verificar novamente em instantes.'
+        message: 'Publicação enviada ao Instagram com sucesso.'
       };
+    } catch (error) {
+      updatePostCell_(sheet, found.row, 6, 'ERROR');
+      updatePostCell_(sheet, found.row, 10, safeErrorMessage_(error));
+      throw new Error(safeErrorMessage_(error));
     }
-
-    const publishResponse = metaRequest_(
-      'POST',
-      '/' + encodeURIComponent(igUserId) + '/media_publish',
-      { creation_id: containerId },
-      token
-    );
-    if (!publishResponse.id) throw new Error('A Meta não retornou o ID da publicação.');
-
-    updatePostCell_(sheet, found.row, 6, 'PUBLISHED');
-    updatePostCell_(sheet, found.row, 8, publishResponse.id);
-    updatePostCell_(sheet, found.row, 9, new Date().toISOString());
-
-    return {
-      ok: true,
-      pending: false,
-      mediaId: publishResponse.id,
-      containerId: containerId,
-      message: 'Publicação enviada ao Instagram com sucesso.'
-    };
-  } catch (error) {
-    updatePostCell_(sheet, found.row, 6, 'ERROR');
-    updatePostCell_(sheet, found.row, 10, safeErrorMessage_(error));
-    throw new Error(safeErrorMessage_(error));
+  } finally {
+    lock.releaseLock();
   }
 }
 
