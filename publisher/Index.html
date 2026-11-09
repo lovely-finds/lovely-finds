@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cantinho dos Achados Publisher</title>
+  <style>
+    :root{--bg:#f8f4f2;--surface:#fff;--ink:#302b2b;--muted:#7b7071;--rose:#bf7889;--rose-dark:#985b6c;--line:#eee3e1;--sage:#84977e;--gold:#e7c778;--shadow:0 12px 36px rgba(64,42,45,.07)}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+    .shell{min-height:100vh;display:grid;grid-template-columns:250px 1fr}
+    aside{background:#fff;border-right:1px solid var(--line);padding:28px 18px;display:flex;flex-direction:column;gap:30px}
+    .brand{display:flex;align-items:center;gap:12px;padding:4px 8px}
+    .brand-mark{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#f3d7dc,#f9ebd8);display:grid;place-items:center;color:var(--rose-dark);font-size:21px}
+    .brand strong{display:block;font-family:Georgia,serif;font-size:18px;font-weight:600}
+    .brand small{color:var(--muted);font-size:11px}
+    nav{display:grid;gap:7px}
+    nav button{border:0;background:transparent;text-align:left;padding:12px 14px;border-radius:12px;color:#6e6465;font-weight:600}
+    nav button.active,nav button:hover{background:#f9edf0;color:var(--rose-dark)}
+    .aside-bottom{margin-top:auto;border-top:1px solid var(--line);padding:18px 8px 0;color:var(--muted);font-size:12px}
+    main{padding:34px clamp(18px,4vw,54px) 60px;max-width:1440px;width:100%;margin:0 auto}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:28px}
+    .eyebrow{font-size:11px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--rose-dark)}
+    h1{font-family:Georgia,serif;font-weight:500;font-size:clamp(27px,3vw,36px);margin:4px 0}
+    .sub{color:var(--muted);margin:0}
+    .top-actions{display:flex;align-items:center;gap:10px}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);background:white;border-radius:999px;color:var(--muted);font-size:12px}
+    .dot{width:8px;height:8px;border-radius:50%;background:#d1a04e}.dot.ok{background:#5c9c72}
+    .btn{border:0;border-radius:11px;padding:11px 16px;font-weight:700;transition:.15s}
+    .btn-primary{background:var(--rose);color:white;box-shadow:0 5px 13px rgba(191,120,137,.2)}
+    .btn-primary:hover{background:var(--rose-dark)}
+    .btn-secondary{background:white;border:1px solid var(--line);color:var(--ink)}
+    .btn-danger{background:#9b4e5d;color:white}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:22px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+    .metric-label{font-size:12px;color:var(--muted);font-weight:700}
+    .metric-value{font-family:Georgia,serif;font-size:28px;margin:7px 0 0}
+    .metric-note{font-size:12px;color:var(--muted);margin-top:4px}
+    .layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.8fr);gap:18px}
+    h2{font-family:Georgia,serif;font-weight:500;font-size:22px;margin:0 0 5px}
+    .section-copy{color:var(--muted);font-size:13px;margin:0 0 20px}
+    label{display:block;font-weight:700;font-size:12px;margin:14px 0 7px}
+    input,textarea{width:100%;border:1px solid #e7dada;border-radius:10px;background:#fff;padding:12px 13px;color:var(--ink);outline:none}
+    input:focus,textarea:focus{border-color:var(--rose);box-shadow:0 0 0 3px rgba(191,120,137,.12)}
+    textarea{resize:vertical;min-height:132px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .hint{font-size:11px;color:var(--muted);margin-top:5px}
+    .preview{border:1px dashed #e8d5d8;background:#fffafa;border-radius:14px;min-height:220px;display:grid;place-items:center;overflow:hidden}
+    .preview img{display:block;max-width:100%;max-height:350px;object-fit:contain}
+    .preview-empty{padding:22px;text-align:center;color:var(--muted);font-size:13px}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    .status-line{margin-top:14px;font-size:13px;color:var(--muted);min-height:20px}
+    .status-line.error{color:#a33e4d}.status-line.success{color:#337b51}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+    th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+    .badge{display:inline-block;border-radius:999px;background:#f7eee6;color:#8b6844;font-size:10px;font-weight:800;letter-spacing:.04em;padding:4px 8px}
+    .badge.published{background:#eaf4ec;color:#397b4e}.badge.error{background:#f9e9eb;color:#a33e4d}
+    .empty{padding:25px 10px;text-align:center;color:var(--muted);font-size:13px}
+    .hidden{display:none!important}
+    .notice{border:1px solid #efe1bd;background:#fff9e9;border-radius:12px;padding:12px 14px;color:#78643a;font-size:12px;margin-bottom:18px}
+    .profile-name{font-weight:800;font-size:17px;margin-top:4px}
+    .profile-id{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+    .divider{height:1px;background:var(--line);margin:18px 0}
+    .loading{opacity:.6;pointer-events:none}
+    @media(max-width:950px){.shell{grid-template-columns:1fr}aside{padding:12px 16px;gap:10px;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(3,1fr)}nav button{text-align:center;padding:9px 5px;font-size:12px}.aside-bottom{display:none}.layout{grid-template-columns:1fr}}
+    @media(max-width:650px){main{padding:24px 14px 44px}.topbar{align-items:flex-start;flex-direction:column}.top-actions{width:100%;justify-content:space-between}.grid{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}.card{padding:16px}nav{grid-template-columns:repeat(3,1fr)}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand">
+      <div class="brand-mark">♡</div>
+      <div><strong>Cantinho dos Achados</strong><small>Publisher • central de conteúdo</small></div>
+    </div>
+    <nav>
+      <button class="active" data-view="dashboard">Visão geral</button>
+      <button data-view="compose">Criar publicação</button>
+      <button data-view="history">Publicações</button>
+    </nav>
+    <div class="aside-bottom">Versão inicial • Instagram<br>Facebook será conectado na próxima etapa.</div>
+  </aside>
+  <main>
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">Central de publicação</div>
+        <h1 id="pageTitle">Visão geral</h1>
+        <p class="sub">Revise seus conteúdos e publique somente quando estiver pronta.</p>
+      </div>
+      <div class="top-actions">
+        <span class="pill"><span id="connectionDot" class="dot"></span><span id="connectionText">Verificando Instagram…</span></span>
+        <button class="btn btn-secondary" id="refreshButton">Atualizar</button>
+      </div>
+    </header>
+
+    <div class="notice">Modo de segurança: a interface não recebe nem exibe seu token. A credencial fica guardada nas propriedades privadas do Google Apps Script. A publicação só acontece quando você clicar em “Publicar agora” e confirmar.</div>
+
+    <section id="dashboardView">
+      <div class="grid">
+        <div class="card"><div class="metric-label">CONTA CONECTADA</div><div class="metric-value" id="metricAccount">—</div><div class="metric-note" id="metricAccountNote">Aguardando conexão</div></div>
+        <div class="card"><div class="metric-label">RASCUNHOS</div><div class="metric-value" id="metricDrafts">0</div><div class="metric-note">Conteúdos aguardando revisão</div></div>
+        <div class="card"><div class="metric-label">PUBLICADOS PELO PAINEL</div><div class="metric-value" id="metricPublished">0</div><div class="metric-note">Histórico registrado na planilha privada</div></div>
+      </div>
+      <div class="layout">
+        <div class="card">
+          <h2>Comece uma publicação</h2>
+          <p class="section-copy">Adicione a imagem pública do produto e prepare a legenda para revisão.</p>
+          <button class="btn btn-primary" id="startCreate">＋ Criar rascunho</button>
+          <div class="divider"></div>
+          <h2>Atividade recente</h2>
+          <div id="recentPosts" class="empty">Carregando publicações…</div>
+        </div>
+        <div class="card">
+          <h2>Instagram</h2>
+          <p class="section-copy">Diagnóstico de conexão com a conta profissional.</p>
+          <div class="profile-name" id="profileUsername">Verificando…</div>
+          <div class="profile-id" id="profileId"></div>
+          <div class="divider"></div>
+          <button class="btn btn-secondary" id="testConnection">Testar conexão novamente</button>
+          <div class="status-line" id="connectionMessage"></div>
+          <div class="hint">A primeira versão publica imagens individuais. Reels, carrosséis e Facebook entrarão em etapas seguintes.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="composeView" class="hidden">
+      <div class="layout">
+        <div class="card">
+          <h2>Novo rascunho</h2>
+          <p class="section-copy">Preencha os dados. Salvar não publica nada no Instagram.</p>
+          <label for="productName">Nome interno da publicação</label>
+          <input id="productName" maxlength="120" placeholder="Ex.: Vestido longo preto — SHEIN">
+          <label for="imageUrl">URL pública da imagem (HTTPS)</label>
+          <input id="imageUrl" type="url" placeholder="https://.../imagem.jpg">
+          <div class="hint">A imagem precisa abrir sem login e ser acessível pelos servidores da Meta. JPEG recomendado para o primeiro teste.</div>
+          <label for="caption">Legenda do Instagram</label>
+          <textarea id="caption" maxlength="2200" placeholder="Escreva a legenda, CTA e hashtags…"></textarea>
+          <div class="hint"><span id="captionCount">0</span>/2.200 caracteres</div>
+          <div class="actions">
+            <button class="btn btn-secondary" id="saveDraft">Salvar rascunho</button>
+            <button class="btn btn-primary" id="saveAndPreview">Salvar e revisar</button>
+          </div>
+          <div class="status-line" id="composeMessage"></div>
+        </div>
+        <div class="card">
+          <h2>Pré-visualização</h2>
+          <p class="section-copy">Prévia aproximada da imagem e da legenda.</p>
+          <div class="preview" id="imagePreview"><div class="preview-empty">Cole uma URL HTTPS para visualizar a imagem.</div></div>
+          <div style="font-weight:800;margin-top:15px">cantinho_dos_achados_br</div>
+          <p id="captionPreview" class="sub" style="white-space:pre-wrap;font-size:13px;margin-top:7px">Sua legenda aparecerá aqui.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="historyView" class="hidden">
+      <div class="card">
+        <h2>Histórico de publicações</h2>
+        <p class="section-copy">Rascunhos, publicações concluídas e eventuais erros.</p>
+        <div class="table-wrap" id="historyTable"><div class="empty">Carregando histórico…</div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  let dashboard = { posts: [], profile: { connected: false } };
+  let currentDraftId = null;
+
+  function callServer(name, args, onSuccess, onFailure) {
+    const runner = google.script.run
+      .withSuccessHandler(onSuccess)
+      .withFailureHandler(error => onFailure(error && error.message ? error.message : String(error)));
+    if (args === undefined) runner[name]();
+    else runner[name](args);
+  }
+
+  function setMessage(id, text, type) {
+    const el = document.getElementById(id);
+    el.textContent = text || '';
+    el.className = 'status-line ' + (type || '');
+  }
+
+  function loadDashboard() {
+    document.body.classList.add('loading');
+    callServer('getDashboardData', undefined, data => {
+      document.body.classList.remove('loading');
+      dashboard = data;
+      renderDashboard();
+    }, error => {
+      document.body.classList.remove('loading');
+      document.getElementById('connectionText').textContent = 'Falha na conexão';
+      document.getElementById('connectionMessage').textContent = error;
+      document.getElementById('recentPosts').textContent = 'Não foi possível carregar os dados.';
+    });
+  }
+
+  function renderDashboard() {
+    const profile = dashboard.profile || {};
+    document.getElementById('connectionDot').className = 'dot ' + (profile.connected && profile.matchesConfiguredAccount ? 'ok' : '');
+    document.getElementById('connectionText').textContent = profile.connected ? 'Instagram conectado' : 'Instagram não conectado';
+    document.getElementById('metricAccount').textContent = profile.username ? '@' + profile.username : '—';
+    document.getElementById('metricAccountNote').textContent = profile.matchesConfiguredAccount ? 'Conta identificada corretamente' : 'Verifique as configurações';
+    document.getElementById('profileUsername').textContent = profile.username ? '@' + profile.username : 'Instagram indisponível';
+    document.getElementById('profileId').textContent = profile.id ? 'ID: ' + profile.id : '';
+    const posts = dashboard.posts || [];
+    document.getElementById('metricDrafts').textContent = posts.filter(p => p.status === 'DRAFT').length;
+    document.getElementById('metricPublished').textContent = posts.filter(p => p.status === 'PUBLISHED').length;
+    document.getElementById('recentPosts').innerHTML = posts.length ? posts.slice(0,5).map(postRowHtml_).join('') : '<div class="empty">Nenhuma publicação registrada ainda.</div>';
+    document.getElementById('historyTable').innerHTML = posts.length
+      ? '<table><thead><tr><th>Publicação</th><th>Status</th><th>Criada em</th><th>ID da mídia</th></tr></thead><tbody>' +
+        posts.map(p => '<tr><td>' + escapeHtml(p.productName) + '</td><td>' + badgeHtml(p.status) + '</td><td>' + escapeHtml(formatDate(p.createdAt)) + '</td><td>' + escapeHtml(p.mediaId || '—') + '</td></tr>').join('') +
+        '</tbody></table>'
+      : '<div class="empty">Seu histórico aparecerá aqui.</div>';
+  }
+
+  function postRowHtml_(post) {
+    return '<div style="display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #eee3e1"><div><strong>' +
+      escapeHtml(post.productName) + '</strong><div class="hint">' + escapeHtml(formatDate(post.createdAt)) + '</div></div>' +
+      badgeHtml(post.status) + '</div>';
+  }
+
+  function badgeHtml(status) {
+    const cls = status === 'PUBLISHED' ? 'published' : status === 'ERROR' ? 'error' : '';
+    const labels = { DRAFT: 'RASCUNHO', PROCESSING: 'PROCESSANDO', PUBLISHED: 'PUBLICADO', ERROR: 'ERRO' };
+    return '<span class="badge ' + cls + '">' + (labels[status] || escapeHtml(status)) + '</span>';
+  }
+
+  function formatDate(value) {
+    if (!value) return '—';
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? '—' : date.toLocaleString('pt-BR');
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+
+  function showView(view) {
+    ['dashboard','compose','history'].forEach(name => {
+      document.getElementById(name + 'View').classList.toggle('hidden', name !== view);
+      document.querySelector('[data-view="' + name + '"]').classList.toggle('active', name === view);
+    });
+    const titles = { dashboard:'Visão geral', compose:'Criar publicação', history:'Publicações' };
+    document.getElementById('pageTitle').textContent = titles[view];
+  }
+
+  document.querySelectorAll('nav button').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
+  document.getElementById('startCreate').addEventListener('click', () => showView('compose'));
+  document.getElementById('refreshButton').addEventListener('click', loadDashboard);
+  document.getElementById('testConnection').addEventListener('click', () => {
+    setMessage('connectionMessage', 'Testando conexão…');
+    callServer('testInstagramConnection', undefined, result => {
+      setMessage('connectionMessage', result.connected ? 'Conexão confirmada para @' + result.username : 'Conta não confirmada.', result.connected ? 'success' : 'error');
+      loadDashboard();
+    }, error => setMessage('connectionMessage', error, 'error'));
+  });
+
+  const imageUrlInput = document.getElementById('imageUrl');
+  const captionInput = document.getElementById('caption');
+  imageUrlInput.addEventListener('input', updatePreview);
+  captionInput.addEventListener('input', updatePreview);
+  function updatePreview() {
+    const url = imageUrlInput.value.trim();
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    if (url) {
+      const img = document.createElement('img');
+      img.alt = 'Prévia da publicação';
+      img.src = url;
+      img.onerror = () => { preview.innerHTML = '<div class="preview-empty">Não foi possível carregar a imagem. Confira se o endereço é público e HTTPS.</div>'; };
+      preview.appendChild(img);
+    } else {
+      preview.innerHTML = '<div class="preview-empty">Cole uma URL HTTPS para visualizar a imagem.</div>';
+    }
+    document.getElementById('captionPreview').textContent = captionInput.value || 'Sua legenda aparecerá aqui.';
+    document.getElementById('captionCount').textContent = captionInput.value.length;
+  }
+
+  function collectDraft() {
+    return {
+      productName: document.getElementById('productName').value.trim(),
+      imageUrl: imageUrlInput.value.trim(),
+      caption: captionInput.value.trim()
+    };
+  }
+
+  function saveDraft(showReview) {
+    const payload = collectDraft();
+    setMessage('composeMessage', 'Salvando rascunho…');
+    callServer('saveDraft', payload, result => {
+      currentDraftId = result.id;
+      setMessage('composeMessage', 'Rascunho salvo. Nada foi publicado.', 'success');
+      if (showReview) {
+        const yes = confirm('Rascunho salvo. Quer publicar esta imagem no Instagram agora? Ela ficará visível no feed.');
+        if (yes) publishCurrentDraft();
+      }
+      loadDashboard();
+    }, error => setMessage('composeMessage', error, 'error'));
+  }
+
+  function publishCurrentDraft() {
+    if (!currentDraftId) return;
+    const confirmed = confirm('Confirma publicar esta imagem no perfil @cantinho_dos_achados_br? A publicação ficará visível para seus seguidores.');
+    if (!confirmed) return;
+    setMessage('composeMessage', 'Enviando imagem para a Meta e aguardando processamento…');
+    callServer('publishDraft', currentDraftId, result => {
+      setMessage('composeMessage', result.message || 'Solicitação concluída.', result.pending ? '' : 'success');
+      loadDashboard();
+    }, error => setMessage('composeMessage', error, 'error'));
+  }
+
+  document.getElementById('saveDraft').addEventListener('click', () => saveDraft(false));
+  document.getElementById('saveAndPreview').addEventListener('click', () => saveDraft(true));
+
+  loadDashboard();
+</script>
+</body>
+</html>
