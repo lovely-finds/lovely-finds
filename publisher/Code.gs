@@ -301,3 +301,55 @@ function safeErrorMessage_(error) {
   const message = String(error && error.message ? error.message : error || 'Erro desconhecido');
   return message.replace(/EA[A-Za-z0-9_-]{30,}/g, '[TOKEN REDIGIDO]').slice(0, 600);
 }
+
+
+/**
+ * Safe image URL test: asks Meta to create and process a media container.
+ * IMPORTANT: this function never calls /media_publish and cannot publish a post.
+ * Run manually from the Apps Script editor when validating a public image URL.
+ */
+function testMetaImageUrl() {
+  const imageUrl = 'https://raw.githubusercontent.com/lovely-finds/lovely-finds/main/uploads/teste-upload-cantinho.jpg';
+  if (!/^https:\/\//i.test(imageUrl)) throw new Error('A URL de teste precisa ser HTTPS.');
+
+  const token = getRequiredProperty_(APP_CONFIG.tokenProperty);
+  const igUserId = getRequiredProperty_(APP_CONFIG.igUserIdProperty);
+
+  const created = metaRequest_(
+    'POST',
+    '/' + encodeURIComponent(igUserId) + '/media',
+    {
+      image_url: imageUrl,
+      caption: 'Teste técnico de imagem — Cantinho dos Achados'
+    },
+    token
+  );
+
+  if (!created.id) throw new Error('A Meta não retornou o ID do contêiner.');
+
+  let status = '';
+  let details = null;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    details = metaRequest_(
+      'GET',
+      '/' + encodeURIComponent(created.id),
+      { fields: 'status_code,status' },
+      token
+    );
+    status = details.status_code || details.status || '';
+    if (status === 'FINISHED' || status === 'ERROR' || status === 'EXPIRED') break;
+    Utilities.sleep(1500);
+  }
+
+  const result = {
+    ok: status === 'FINISHED',
+    published: false,
+    containerId: created.id,
+    status: status || 'IN_PROGRESS',
+    message: status === 'FINISHED'
+      ? 'A Meta conseguiu buscar e processar a imagem. Nenhuma publicação foi feita.'
+      : 'O contêiner foi criado, mas o processamento ainda não foi confirmado. Nenhuma publicação foi feita.'
+  };
+  Logger.log(JSON.stringify(result));
+  return result;
+}
