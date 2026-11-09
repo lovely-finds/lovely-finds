@@ -6,6 +6,7 @@
  * META_IG_ACCESS_TOKEN
  * IG_USER_ID
  * META_API_VERSION (optional; defaults to v27.0)
+ * GITHUB_TOKEN (fine-grained token with Contents: Read and write)
  */
 
 const APP_CONFIG = {
@@ -13,6 +14,8 @@ const APP_CONFIG = {
   tokenProperty: 'META_IG_ACCESS_TOKEN',
   igUserIdProperty: 'IG_USER_ID',
   apiVersionProperty: 'META_API_VERSION',
+  githubTokenProperty: 'GITHUB_TOKEN',
+  githubRepository: 'lovely-finds/lovely-finds',
   defaultApiVersion: 'v27.0',
   postsSheet: 'Posts'
 };
@@ -139,16 +142,30 @@ function publishDraft(draftId) {
       );
       if (!publishResponse.id) throw new Error('A Meta não retornou o ID da publicação.');
 
+      // Mark the post as published BEFORE cleanup. A GitHub cleanup failure
+      // must never turn a successful Instagram publication into an ERROR.
       updatePostCell_(sheet, found.row, 6, 'PUBLISHED');
       updatePostCell_(sheet, found.row, 8, publishResponse.id);
       updatePostCell_(sheet, found.row, 9, new Date().toISOString());
+
+      let cleanup = { ok: false, skipped: true, message: 'Limpeza não executada.' };
+      try {
+        cleanup = deletePublishedImageFromGitHub_(post.imageUrl);
+        updatePostCell_(sheet, found.row, 10, cleanup.ok ? '' : cleanup.message);
+      } catch (cleanupError) {
+        cleanup = { ok: false, message: safeErrorMessage_(cleanupError) };
+        updatePostCell_(sheet, found.row, 10, 'Publicado; falha ao remover imagem do GitHub: ' + cleanup.message);
+      }
 
       return {
         ok: true,
         pending: false,
         mediaId: publishResponse.id,
         containerId: containerId,
-        message: 'Publicação enviada ao Instagram com sucesso.'
+        cleanup: cleanup,
+        message: cleanup.ok
+          ? 'Publicação enviada ao Instagram e imagem removida da pasta uploads.'
+          : 'Publicação enviada ao Instagram, mas a imagem permaneceu no GitHub para limpeza manual.'
       };
     } catch (error) {
       updatePostCell_(sheet, found.row, 6, 'ERROR');
@@ -352,4 +369,95 @@ function testMetaImageUrl() {
   };
   Logger.log(JSON.stringify(result));
   return result;
+}
+
+
+/**
+ * Removes only image files inside uploads/ from the configured public repository.
+ * The GitHub commit history is preserved; this only removes the file from current main.
+ */
+function deletePublishedImageFromGitHub_(imageUrl) {
+  const rawPrefix = 'https://raw.githubusercontent.com/lovely-finds/lovely-finds/main/';
+  const url = String(imageUrl || '').trim();
+  if (url.indexOf(rawPrefix) !== 0) {
+    return { ok: false, skipped: true, message: 'URL fora do repositório autorizado; arquivo não removido.' };
+  }
+
+  const path = decodeURIComponent(url.substring(rawPrefix.length).split('?')[0]);
+  if (!/^uploads\/[A-Za-z0-9._-]+\.(jpg|jpeg|png|webp)$/i.test(path)) {
+    return { ok: false, skipped: true, message: 'Caminho fora de uploads/ ou extensão não permitida; arquivo não removido.' };
+  }
+
+  const token = getRequiredProperty_(APP_CONFIG.githubTokenProperty);
+  const apiUrl = 'https://api.github.com/repos/' + APP_CONFIG.githubRepository +
+    '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+  const headers = {
+    Authorization: 'Bearer ' + token,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+
+  const getResponse = UrlFetchApp.fetch(apiUrl + '?ref=main', {
+    method: 'get',
+    headers: headers,
+    muteHttpExceptions: true
+  });
+  const getCode = getResponse.getResponseCode();
+  if (getCode === 404) {
+    return { ok: true, alreadyAbsent: true, path: path, message: 'A imagem já não estava na pasta uploads/.' };
+  }
+  if (getCode < 200 || getCode >= 300) {
+    throw new Error('GitHub não conseguiu localizar a imagem (HTTP ' + getCode + ').');
+  }
+
+  const file = JSON.parse(getResponse.getContentText());
+  if (!file.sha) throw new Error('GitHub não retornou o SHA do arquivo para exclusão.');
+
+  const deleteResponse = UrlFetchApp.fetch(apiUrl, {
+    method: 'delete',
+    contentType: 'application/json',
+    headers: headers,
+    payload: JSON.stringify({
+      message: 'Remove published image: ' + path,
+      sha: file.sha,
+      branch: 'main'
+    }),
+    muteHttpExceptions: true
+  });
+  const deleteCode = deleteResponse.getResponseCode();
+  if (deleteCode < 200 || deleteCode >= 300) {
+    throw new Error('GitHub não conseguiu remover a imagem (HTTP ' + deleteCode + ').');
+  }
+
+  return {
+    ok: true,
+    path: path,
+    commit: (JSON.parse(deleteResponse.getContentText()).commit || {}).sha || '',
+    message: 'Imagem removida da pasta uploads/; histórico do Git preservado.'
+  };
+}
+
+/**
+ * Manual diagnostic: checks GitHub token permissions without deleting anything.
+ */
+function testGitHubCleanupConnection() {
+  const token = getRequiredProperty_(APP_CONFIG.githubTokenProperty);
+  const response = UrlFetchApp.fetch(
+    'https://api.github.com/repos/' + APP_CONFIG.githubRepository,
+    {
+      method: 'get',
+      headers: {
+        Authorization: 'Bearer ' + token,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      },
+      muteHttpExceptions: true
+    }
+  );
+  const status = response.getResponseCode();
+  if (status < 200 || status >= 300) {
+    throw new Error('Conexão GitHub falhou (HTTP ' + status + '). Verifique o token e as permissões.');
+  }
+  const data = JSON.parse(response.getContentText());
+  return { ok: true, repository: data.full_name, message: 'Token aceito pelo GitHub.' };
 }
