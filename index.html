@@ -7,118 +7,44 @@
   <meta name="robots" content="index,follow">
   <title>Lovely Finds | Curated Inspiration & Discoveries</title>
   <style>
-    :root {
-      color-scheme: light;
-      --ink: #342d2f;
-      --muted: #75696d;
-      --rose: #bd7a8d;
-      --rose-dark: #98596c;
-      --cream: #fffaf8;
-      --line: #efe3e2;
-      --card: #ffffff;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--cream);
-      color: var(--ink);
-      font: 16px/1.7 Georgia, "Times New Roman", serif;
-    }
-    .wrap { width: min(920px, calc(100% - 40px)); margin: 0 auto; }
-    header {
-      border-bottom: 1px solid var(--line);
-      padding: 24px 0;
-      color: var(--rose-dark);
-      font: 600 12px/1.4 system-ui, sans-serif;
-      letter-spacing: .22em;
-      text-transform: uppercase;
-    }
-    main { padding: 84px 0 72px; text-align: center; }
-    .eyebrow {
-      color: var(--rose-dark);
-      font: 600 11px/1.4 system-ui, sans-serif;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-    }
-    h1 {
-      margin: 20px 0 18px;
-      font-size: clamp(50px, 9vw, 88px);
-      font-weight: 400;
-      letter-spacing: -.045em;
-      line-height: 1.02;
-    }
-    .intro {
-      max-width: 650px;
-      margin: 0 auto;
-      color: var(--muted);
-      font-size: clamp(17px, 2.6vw, 20px);
-    }
-    .ornament { width: 54px; height: 1px; margin: 34px auto; background: var(--rose); }
-    .categories {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin: 50px 0;
-      text-align: left;
-    }
-    .category {
-      padding: 25px 22px;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: var(--card);
-    }
-    .category h2 { margin: 0 0 8px; font-size: 22px; font-weight: 400; }
-    .category p { margin: 0; color: var(--muted); font: 14px/1.7 system-ui, sans-serif; }
-    .disclosure {
-      max-width: 680px;
-      margin: 0 auto;
-      color: var(--muted);
-      font: 14px/1.8 system-ui, sans-serif;
-    }
-    footer {
-      padding: 25px 0 36px;
-      border-top: 1px solid var(--line);
-      color: var(--muted);
-      text-align: center;
-      font: 13px/1.8 system-ui, sans-serif;
-    }
-    a { color: var(--rose-dark); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    @media (max-width: 650px) {
-      main { padding: 60px 0; }
-      .categories { grid-template-columns: 1fr; margin: 36px 0; }
-    }
+    :root{color-scheme:light;--ink:#342d2f;--muted:#75696d;--rose:#bd7a8d;--rose-dark:#98596c;--cream:#fffaf8;--line:#efe3e2;--card:#fff}
+    *{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.7 Georgia,"Times New Roman",serif}
+    .wrap{width:min(920px,calc(100% - 40px));margin:0 auto}
+    header{border-bottom:1px solid var(--line);padding:20px 0;color:var(--rose-dark);font:600 12px/1.4 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+    .header-inner{display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{font-weight:700;letter-spacing:.22em}.brand a{color:var(--rose-dark);text-decoration:none}
+    nav{display:flex;flex-wrap:wrap;gap:18px;letter-spacing:0;text-transform:none}nav a{color:var(--rose-dark);text-decoration:none}nav a:hover,footer a:hover{text-decoration:underline}
+    main{padding:84px 0 72px;text-align:center}.eyebrow{color:var(--rose-dark);font:600 11px/1.4 system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase}
+    h1{margin:20px 0 18px;font-size:clamp(50px,9vw,88px);font-weight:400;letter-spacing:-.045em;line-height:1.02}
+    .intro{max-width:650px;margin:0 auto;color:var(--muted);font-size:clamp(17px,2.6vw,20px)}
+    .ornament{width:54px;height:1px;margin:34px auto;background:var(--rose)}
+    .categories{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:50px 0;text-align:left}
+    .category{padding:25px 22px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+    .category h2{margin:0 0 8px;font-size:22px;font-weight:400}.category p{margin:0;color:var(--muted);font:14px/1.7 system-ui,sans-serif}
+    .disclosure{max-width:680px;margin:0 auto;color:var(--muted);font:14px/1.8 system-ui,sans-serif}
+    footer{padding:25px 0 36px;border-top:1px solid var(--line);color:var(--muted);text-align:center;font:13px/1.8 system-ui,sans-serif}
+    footer .footer-links{display:flex;justify-content:center;flex-wrap:wrap;gap:8px 18px;margin-bottom:8px}
+    a{color:var(--rose-dark);text-decoration:none}a:hover{text-decoration:underline}
+    @media(max-width:650px){.header-inner{align-items:flex-start;flex-direction:column}nav{gap:12px 16px}main{padding:60px 0}.categories{grid-template-columns:1fr;margin:36px 0}}
   </style>
 </head>
 <body>
-  <header><div class="wrap">Lovely Finds</div></header>
+  <header><div class="wrap header-inner"><div class="brand"><a href="./index.html">Lovely Finds</a></div><nav aria-label="Main navigation"><a href="./index.html" aria-current="page">Home</a><a href="./about.html">About</a><a href="./contact.html">Contact</a><a href="https://www.pinterest.com/superlovelythings/" target="_blank" rel="noopener noreferrer">Pinterest</a></nav></div></header>
   <main class="wrap">
     <div class="eyebrow">A little inspiration for everyday life</div>
     <h1>Lovely Finds</h1>
     <p class="intro">A curated space for discovering fashion inspiration, beauty favourites and thoughtful finds that bring a little joy to everyday life.</p>
     <div class="ornament" aria-hidden="true"></div>
     <section class="categories" aria-label="Our interests">
-      <article class="category">
-        <h2>Style</h2>
-        <p>Outfit inspiration, fashion details and pieces to explore your personal style.</p>
-      </article>
-      <article class="category">
-        <h2>Beauty</h2>
-        <p>Beauty discoveries, self-care inspiration and products worth a closer look.</p>
-      </article>
-      <article class="category">
-        <h2>Everyday Finds</h2>
-        <p>Useful, charming and interesting discoveries for everyday routines.</p>
-      </article>
+      <article class="category"><h2>Style</h2><p>Outfit inspiration, fashion details and pieces to explore your personal style.</p></article>
+      <article class="category"><h2>Beauty</h2><p>Beauty discoveries, self-care inspiration and products worth a closer look.</p></article>
+      <article class="category"><h2>Everyday Finds</h2><p>Useful, charming and interesting discoveries for everyday routines.</p></article>
     </section>
     <p class="disclosure">Lovely Finds shares curated inspiration and product discoveries. Some links may be affiliate links. If you make a purchase through an affiliate link, we may earn a commission at no additional cost to you.</p>
   </main>
-  <footer>
-    <div class="wrap">
-      <div>Contact: <a href="mailto:cantinhodosachados220@gmail.com">cantinhodosachados220@gmail.com</a></div>
-      <div><a href="https://lovely-finds.github.io/lovely-finds-privacy/">Privacy Policy</a></div>
-      <div>© 2026 Lovely Finds</div>
-    </div>
-  </footer>
+  <footer><div class="wrap">
+    <div class="footer-links"><a href="./about.html">About Lovely Finds</a><a href="./contact.html">Contact</a><a href="./privacy.html">Privacy Policy</a><a href="https://www.pinterest.com/superlovelythings/" target="_blank" rel="noopener noreferrer">Pinterest</a></div>
+    <div>Contact: <a href="mailto:cantinhodosachados220@gmail.com">cantinhodosachados220@gmail.com</a></div>
+    <div>© 2026 Lovely Finds</div>
+  </div></footer>
 </body>
 </html>
